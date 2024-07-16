@@ -184,6 +184,7 @@ class PGCli:
         warn=None,
         ssh_tunnel_url: Optional[str] = None,
         log_file: Optional[str] = None,
+        histfile: Optional[str] = None,
     ):
         self.force_passwd_prompt = force_passwd_prompt
         self.never_passwd_prompt = never_passwd_prompt
@@ -949,13 +950,26 @@ class PGCli:
                 query = self.execute_command("rollback")
                 return query.successful  # quit only if query is successful
 
-    def run_cli(self):
-        logger = self.logger
+    def _get_histfile(self) -> str:
+        """Get the current history file to be use according"""
+        # TODO
+        # if self.histfile:
+        #     return expanduser self.histfile
 
+        # TODO: this below was the previous implementation
+
+
+        # TODO - this is already configurable on the config? check
         history_file = self.config["main"]["history_file"]
         if history_file == "default":
             history_file = config_location() + "history"
-        history = FileHistory(os.path.expanduser(history_file))
+        return FileHistory(os.path.expanduser(history_file))
+
+
+    def run_cli(self):
+        logger = self.logger
+
+        history = _get_histfile()
         self.refresh_completions(history=history, persist_priorities="none")
 
         self.prompt_app = self._build_cli(history)
@@ -1489,6 +1503,11 @@ class PGCli:
     "--log-file",
     default=None,
     help="Write all queries & output into a file, in addition to the normal output destination.",
+)
+@click.option(
+    "--histfile",
+    default=None,
+    help="Specify the file to use to store the history.",
 )
 @click.argument("dbname", default=lambda: None, envvar="PGDATABASE", nargs=1)
 @click.argument("username", default=lambda: None, envvar="PGUSER", nargs=1)
