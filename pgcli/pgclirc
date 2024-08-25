@@ -234,6 +234,12 @@ output.null = "#808080"
 [alias_dsn]
 # example_dsn = postgresql://[user[:password]@][netloc][:port][/dbname]
 
+# Specify a history file for a DSN alias, this can be useful if
+# multiple databases should share the same history
+[dsn_histfiles]
+# mydb_prod = ~/.config/pgcli/history_mydb
+# mydb_beta = ~/.config/pgcli/history_mydb
+
 # Format for number representation
 # for decimal "d" - 12345678, ",d" - 12,345,678
 # for float "g" - 123456.78, ",g" - 123,456.78

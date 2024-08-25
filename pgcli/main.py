@@ -185,6 +185,13 @@ class PGCli:
         ssh_tunnel_url: Optional[str] = None,
         log_file: Optional[str] = None,
         histfile: Optional[str] = None,
+        # TODO: current problems
+        # PGCli is instantiated without knowing about db connection details
+        # the connection details are only know at .connect() time
+        #
+            # Next, figure out how /connect within a runing instnace changes it
+            # maybe we need to change at what point the HistoryFile is created
+            # and do it on connection?
     ):
         self.force_passwd_prompt = force_passwd_prompt
         self.never_passwd_prompt = never_passwd_prompt
@@ -317,6 +324,7 @@ class PGCli:
             with open(log_file, "a+"):
                 pass  # ensure writeable
         self.log_file = log_file
+        self.histfile = histfile
 
         # formatter setup
         self.formatter = TabularOutputFormatter(format_name=c["main"]["table_format"])
@@ -950,26 +958,27 @@ class PGCli:
                 query = self.execute_command("rollback")
                 return query.successful  # quit only if query is successful
 
-    def _get_histfile(self) -> str:
-        """Get the current history file to be use according"""
-        # TODO
-        # if self.histfile:
-        #     return expanduser self.histfile
+    def _get_histfile(self) -> FileHistory:
+        """Select the history file to be used according to flags, config & database"""
 
-        # TODO: this below was the previous implementation
+        if self.histfile:
+            return FileHistory(os.path.expanduser(self.histfile))
 
+        if self.dsn:
+            dsn_histfile = self.config["main"]["dsn_histfiles"].get(self.dsn)
+            if dsn_histfile:
+                return FileHistory(os.path.expanduser(dsn_histfile))
 
-        # TODO - this is already configurable on the config? check
         history_file = self.config["main"]["history_file"]
         if history_file == "default":
-            history_file = config_location() + "history"
+            breakpoint()
+            history_file = config_location() + f"history-{self}"
         return FileHistory(os.path.expanduser(history_file))
-
 
     def run_cli(self):
         logger = self.logger
 
-        history = _get_histfile()
+        history = self._get_histfile()
         self.refresh_completions(history=history, persist_priorities="none")
 
         self.prompt_app = self._build_cli(history)
@@ -1536,6 +1545,7 @@ def cli(
     warn,
     ssh_tunnel: str,
     log_file: str,
+    histfile: Optional[str],
 ):
     if version:
         print("Version:", __version__)
@@ -1595,6 +1605,7 @@ def cli(
         warn=warn,
         ssh_tunnel_url=ssh_tunnel,
         log_file=log_file,
+        histfile=histfile,
     )
 
     # Choose which ever one has a valid value.
